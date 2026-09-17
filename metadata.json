@@ -1,0 +1,8 @@
+{
+  "name": "Brendow Elite",
+  "description": "Sistema de alta performance para monitoramento de cronogramas e protocolos operacionais.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

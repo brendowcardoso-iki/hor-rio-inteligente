@@ -1,0 +1,178 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile containing synchronization settings, files list, background images and options.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "User unique identifier."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User email address."
+        },
+        "accentColor": {
+          "type": "string",
+          "description": "Hex color code for application accent customization."
+        },
+        "theme": {
+          "type": "string",
+          "description": "App visual theme identifier."
+        },
+        "sidebarCollapsed": {
+          "type": "boolean",
+          "description": "Whether the navigation sidebar is collapsed."
+        },
+        "showFullTimeline": {
+          "type": "boolean",
+          "description": "Configuration showing full timeline view."
+        },
+        "showVisualCalendar": {
+          "type": "boolean",
+          "description": "Configuration showing visual agenda calendar."
+        },
+        "profileImage": {
+          "type": "string",
+          "description": "Base64 or URL string of user profile identity image."
+        },
+        "backgroundImage": {
+          "type": "string",
+          "description": "Custom main viewport background image reference."
+        },
+        "sidebarBackgroundImage": {
+          "type": "string",
+          "description": "Custom sidebar background image reference."
+        },
+        "selectedIndividualFiles": {
+          "type": "array",
+          "description": "A list of individual files selected for synchronization."
+        },
+        "trashedFiles": {
+          "type": "array",
+          "description": "Files moved to internal trash bin."
+        },
+        "parsedCache": {
+          "type": "object",
+          "description": "Cached parsed agenda files text and schedule outputs."
+        },
+        "importGoogleCalendar": {
+          "type": "boolean",
+          "description": "Whether to import events from Google Calendar."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp indicating last user update synchronized from client."
+        }
+      },
+      "required": ["uid", "email", "updatedAt"]
+    },
+    "ScheduleItem": {
+      "title": "ScheduleItem",
+      "description": "An individual schedule activity item details.",
+      "type": "object",
+      "properties": {
+        "startTime": {
+          "type": "string",
+          "description": "Time string when the activity begins (HH:MM format)."
+        },
+        "endTime": {
+          "type": "string",
+          "description": "Time string when the activity ends (HH:MM format)."
+        },
+        "activity": {
+          "type": "string",
+          "description": "Name or title of the schedule activity."
+        },
+        "instructions": {
+          "type": "string",
+          "description": "Contextual instructions or description for the activity."
+        },
+        "category": {
+          "type": "string",
+          "description": "Inferred or set category category."
+        },
+        "sourceFile": {
+          "type": "string",
+          "description": "Origin filename for the schedule item."
+        }
+      },
+      "required": ["startTime", "endTime", "activity"]
+    },
+    "ActivityCustomization": {
+      "title": "ActivityCustomization",
+      "description": "Custom objectives and checklists assigned to a schedule activity block.",
+      "type": "object",
+      "properties": {
+        "objective": {
+          "type": "string",
+          "description": "Overall objective for this activity protocol."
+        },
+        "steps": {
+          "type": "array",
+          "description": "Actionable task items."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp indicating last customization update."
+        }
+      },
+      "required": ["updatedAt"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "User feedback given at the end of an activity period.",
+      "type": "object",
+      "properties": {
+        "activityName": {
+          "type": "string",
+          "description": "Name of the activity."
+        },
+        "startTime": {
+          "type": "string",
+          "description": "Start time of the activity."
+        },
+        "endTime": {
+          "type": "string",
+          "description": "End time of the activity."
+        },
+        "feedbackText": {
+          "type": "string",
+          "description": "Textual feedback."
+        },
+        "rating": {
+          "type": "number",
+          "description": "Numerical rating of performance."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp indicating feedback creation."
+        }
+      },
+      "required": ["activityName", "startTime", "endTime", "feedbackText", "rating", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Primary settings and user details document."
+    },
+    "/users/{userId}/schedule/current": {
+      "schema": "ScheduleItem",
+      "description": "Schedule elements belonging to the specific user."
+    },
+    "/users/{userId}/customizations/{customizationId}": {
+      "schema": "ActivityCustomization",
+      "description": "Tailored objectives and checklists associated with specific schedule actions."
+    },
+    "/users/{userId}/feedbacks/{feedbackId}": {
+      "schema": "Feedback",
+      "description": "Feedback logs for completed activities."
+    }
+  }
+}

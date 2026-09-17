@@ -1,0 +1,127 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- User Validation ---
+    function isValidUser(data) {
+      return data.uid == request.auth.uid
+        && data.email is string && data.email.size() > 0 && data.email.size() <= 256
+        && data.updatedAt == request.time
+        && (!('accentColor' in data) || (data.accentColor is string && data.accentColor.size() <= 32))
+        && (!('theme' in data) || (data.theme is string && data.theme.size() <= 64))
+        && (!('sidebarCollapsed' in data) || (data.sidebarCollapsed is bool))
+        && (!('showFullTimeline' in data) || (data.showFullTimeline is bool))
+        && (!('showVisualCalendar' in data) || (data.showVisualCalendar is bool))
+        && (!('profileImage' in data) || (data.profileImage is string && data.profileImage.size() <= 1048576))
+        && (!('backgroundImage' in data) || (data.backgroundImage is string && data.backgroundImage.size() <= 1048576))
+        && (!('sidebarBackgroundImage' in data) || (data.sidebarBackgroundImage is string && data.sidebarBackgroundImage.size() <= 1048576))
+        && (!('selectedIndividualFiles' in data) || (data.selectedIndividualFiles is list && data.selectedIndividualFiles.size() <= 1000))
+        && (!('trashedFiles' in data) || (data.trashedFiles is list && data.trashedFiles.size() <= 1000))
+        && (!('importGoogleCalendar' in data) || (data.importGoogleCalendar is bool))
+        && (!('parsedCache' in data) || (data.parsedCache is map && data.parsedCache.keys().size() <= 1000));
+    }
+
+    // --- User Collection Match ---
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && isValidUser(incoming())
+        && incoming().keys().hasAll(['uid', 'email', 'updatedAt'])
+        && incoming().keys().size() >= 3;
+      
+      // Update Split Actions
+      allow update: if isOwner(userId)
+        && isValidUser(incoming())
+        && incoming().uid == existing().uid
+        && incoming().email == existing().email
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'accentColor', 'theme', 'sidebarCollapsed', 'showFullTimeline', 'showVisualCalendar',
+            'profileImage', 'backgroundImage', 'sidebarBackgroundImage',
+            'selectedIndividualFiles', 'trashedFiles', 'parsedCache', 'importGoogleCalendar', 'updatedAt'
+          ])
+        );
+      
+      allow delete: if false; // Profile removal is not permitted directly
+
+      // Subcollection for schedule items
+      match /schedule/{itemId} {
+        allow list, get: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && incoming().startTime is string && incoming().startTime.size() <= 16
+          && incoming().endTime is string && incoming().endTime.size() <= 16
+          && incoming().activity is string && incoming().activity.size() <= 512
+          && (!('instructions' in incoming()) || (incoming().instructions is string && incoming().instructions.size() <= 4096))
+          && (!('category' in incoming()) || (incoming().category is string && incoming().category.size() <= 128))
+          && (!('sourceFile' in incoming()) || (incoming().sourceFile is string && incoming().sourceFile.size() <= 256));
+        allow update: if isOwner(userId)
+          && incoming().startTime is string && incoming().startTime.size() <= 16
+          && incoming().endTime is string && incoming().endTime.size() <= 16
+          && incoming().activity is string && incoming().activity.size() <= 512
+          && (!('instructions' in incoming()) || (incoming().instructions is string && incoming().instructions.size() <= 4096))
+          && (!('category' in incoming()) || (incoming().category is string && incoming().category.size() <= 128))
+          && (!('sourceFile' in incoming()) || (incoming().sourceFile is string && incoming().sourceFile.size() <= 256))
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'startTime', 'endTime', 'activity', 'instructions', 'category', 'sourceFile'
+          ]);
+        allow delete: if isOwner(userId);
+      }
+
+      // Subcollection for customizations
+      match /customizations/{customizationId} {
+        allow list, get: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && incoming().updatedAt == request.time
+          && (!('objective' in incoming()) || (incoming().objective is string && incoming().objective.size() <= 1024))
+          && (!('steps' in incoming()) || (incoming().steps is list && incoming().steps.size() <= 100));
+        allow update: if isOwner(userId)
+          && incoming().updatedAt == request.time
+          && (!('objective' in incoming()) || (incoming().objective is string && incoming().objective.size() <= 1024))
+          && (!('steps' in incoming()) || (incoming().steps is list && incoming().steps.size() <= 100))
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'objective', 'steps', 'updatedAt'
+          ]);
+        allow delete: if isOwner(userId);
+      }
+
+      // Subcollection for feedbacks
+      match /feedbacks/{feedbackId} {
+        allow list, get: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && incoming().activityName is string && incoming().activityName.size() <= 512
+          && incoming().startTime is string && incoming().startTime.size() <= 16
+          && incoming().endTime is string && incoming().endTime.size() <= 16
+          && incoming().feedbackText is string && incoming().feedbackText.size() <= 4096
+          && incoming().rating is number
+          && incoming().createdAt is timestamp;
+        allow update: if false; // Feedbacks are immutable once written
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}
